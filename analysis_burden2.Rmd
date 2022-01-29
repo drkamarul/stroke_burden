@@ -3,11 +3,12 @@ title: "Longitudinal Data Study"
 author: "Kamarul Imran Musa"
 date: "1/26/2022"
 output: 
-  html_document:
-    toc: true
+  html_document: 
+    toc: yes
     toc_float:
-      collapsed: false
-      smooth_scroll: false
+      collapsed: no
+      smooth_scroll: no
+    keep_md: yes
 ---
 
 ```{r setup, include=FALSE}
