@@ -1,0 +1,164 @@
+---
+title: "Longitudinal Data Study"
+author: "Kamarul Imran Musa"
+date: "1/26/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prepare
+
+```{r}
+library(tidyverse)
+library(gtsummary)
+```
+
+# Read data
+
+```{r}
+data1 <- read_rds('zbicafu.Rds')
+summary(data1)
+```
+
+
+
+```{r}
+data1id <- 
+  data1 %>%
+  select(record_id, pt_name, cg_name, 
+         pt_gender, pt_age, cg_gender) %>%
+  filter(!is.na(pt_name))
+data1id
+```
+
+
+# describe
+
+```{r}
+data2 <- 
+  data1 %>%
+  select(record_id, 
+         #pt_name,
+         #cg_name,
+         redcap_event_name, 
+         starts_with('zbi_total'), starts_with('cafu')) %>%
+  mutate(redcap_event_name = factor(redcap_event_name)) 
+data2
+```
+
+```{r}
+data3 <- data2 %>%
+  left_join(data1id, by = 'record_id') %>%
+  filter(redcap_event_name == 'baseline_1week_arm_1' | 
+           redcap_event_name == '1month_arm_1') %>%
+  relocate(pt_name, cg_name, .after = record_id)
+data3
+```
+
+
+# overall scores 
+
+```{r}
+data3 %>%
+  select(redcap_event_name, 
+         pt_gender, pt_age, 
+         cg_gender, 
+         starts_with('zbi'), starts_with('cafu')) %>%
+  tbl_summary(by = 'redcap_event_name',
+              statistic = list(all_continuous() ~ "{mean} ({sd})"),
+              digits = all_continuous() ~ 2,)
+```
+
+# At baseline 1 week by gender
+
+```{r}
+data3 %>%
+  select(redcap_event_name, 
+         pt_gender, pt_age, 
+         cg_gender, 
+         starts_with('zbi'), starts_with('cafu')) %>%
+  filter(redcap_event_name == 'baseline_1week_arm_1') %>%
+  tbl_summary(by = 'cg_gender',
+              statistic = list(all_continuous() ~ "{mean} ({sd})"), 
+              digits = all_continuous() ~ 2,)
+```
+# At 1 month by gender
+
+```{r}
+data3 %>%
+  select(redcap_event_name, 
+         pt_gender, pt_age, 
+         cg_gender, 
+         starts_with('zbi'), starts_with('cafu')) %>%
+  filter(redcap_event_name == '1month_arm_1') %>%
+  tbl_summary(by = 'cg_gender',
+              statistic = list(all_continuous() ~ "{mean} ({sd})"), 
+              digits = all_continuous() ~ 2,)
+```
+# Pre-post ZBI
+
+```{r}
+data3_zbi <- data3 %>%
+  select(record_id, pt_name, cg_name, 
+         cg_gender, 
+         redcap_event_name, zbi_total_score) %>%
+  pivot_wider(names_from = redcap_event_name,
+              values_from = zbi_total_score) %>%
+  rename(at_1_mth = "1month_arm_1") %>%
+  mutate(diff = at_1_mth - baseline_1week_arm_1,
+         percent_diff = (diff/baseline_1week_arm_1)*100)
+data3_zbi
+```
+
+```{r}
+data3_zbi %>%
+  select(cg_gender, baseline_1week_arm_1:percent_diff) %>%
+  tbl_summary(by = cg_gender,
+              statistic = list(all_continuous() ~ "{mean} ({sd})"), 
+              digits = all_continuous() ~ 2,)
+
+```
+
+```{r}
+data3_cafu <- data3 %>%
+  select(record_id, pt_name, cg_name, 
+         cg_gender, 
+         redcap_event_name, 
+         starts_with('cafu')) %>%
+  pivot_wider(names_from = redcap_event_name,
+              values_from = cafu_iadl_d_score:cafu_adl_u_score) %>%
+  mutate(diff_iadl_d = cafu_iadl_d_score_1month_arm_1 - cafu_iadl_d_score_baseline_1week_arm_1,
+         diff_iadl_u = cafu_iadl_u_score_1month_arm_1 - cafu_iadl_u_score_baseline_1week_arm_1,
+         diff_iadl_u_mean =  cafu_iadl_u_meanscore_1month_arm_1 - cafu_iadl_u_meanscore_baseline_1week_arm_1, 
+         diff_adl_d = cafu_adl_d_score_1month_arm_1 - cafu_adl_d_score_baseline_1week_arm_1, 
+         diff_adl_u = cafu_adl_u_score_1month_arm_1 - cafu_adl_u_score_baseline_1week_arm_1)
+
+data3_cafu
+```
+
+# Below - Not necessary
+
+```{r}
+res_by_fu2 <- 
+  data3 %>%
+  select(redcap_event_name, 
+         pt_gender, pt_age, 
+         cg_gender, 
+         starts_with('zbi'), starts_with('cafu')) %>%
+  group_by(redcap_event_name) %>%
+  nest() %>%
+  mutate(descri = map(.x = data, 
+                      ~ tbl_summary(data = .x, by = 'cg_gender', 
+                                    statistic = list(all_continuous() ~ "{mean} ({sd})"), 
+                                    digits = all_continuous() ~ 2,) %>%
+                        add_p() %>%
+                        as_hux_table()
+                      )) %>%
+  ungroup(descri)
+res_by_fu2$descri
+```
+
+
