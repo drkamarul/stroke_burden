@@ -2,7 +2,12 @@
 title: "Longitudinal Data Study"
 author: "Kamarul Imran Musa"
 date: "1/26/2022"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
 ---
 
 ```{r setup, include=FALSE}
@@ -24,6 +29,12 @@ data1 <- read_rds('zbicafu.Rds')
 summary(data1)
 ```
 
+```{r}
+sum(!is.na(unique(data1$pt_name)))
+sum(!is.na(unique(data1$cg_name)))
+```
+
+
 
 
 ```{r}
@@ -32,7 +43,10 @@ data1id <-
   select(record_id, pt_name, cg_name, 
          pt_gender, pt_age, cg_gender) %>%
   filter(!is.na(pt_name))
-data1id
+#data1id
+data1id %>%
+  select(pt_gender, pt_age, cg_gender) %>%
+  tbl_summary()
 ```
 
 
@@ -47,8 +61,10 @@ data2 <-
          redcap_event_name, 
          starts_with('zbi_total'), starts_with('cafu')) %>%
   mutate(redcap_event_name = factor(redcap_event_name)) 
-data2
+#data2
 ```
+
+
 
 ```{r}
 data3 <- data2 %>%
@@ -56,7 +72,7 @@ data3 <- data2 %>%
   filter(redcap_event_name == 'baseline_1week_arm_1' | 
            redcap_event_name == '1month_arm_1') %>%
   relocate(pt_name, cg_name, .after = record_id)
-data3
+#data3
 ```
 
 
@@ -73,6 +89,8 @@ data3 %>%
               digits = all_continuous() ~ 2,)
 ```
 
+
+
 # At baseline 1 week by gender
 
 ```{r}
@@ -86,6 +104,8 @@ data3 %>%
               statistic = list(all_continuous() ~ "{mean} ({sd})"), 
               digits = all_continuous() ~ 2,)
 ```
+
+
 # At 1 month by gender
 
 ```{r}
@@ -99,6 +119,7 @@ data3 %>%
               statistic = list(all_continuous() ~ "{mean} ({sd})"), 
               digits = all_continuous() ~ 2,)
 ```
+
 # Pre-post ZBI
 
 ```{r}
@@ -111,8 +132,10 @@ data3_zbi <- data3 %>%
   rename(at_1_mth = "1month_arm_1") %>%
   mutate(diff = at_1_mth - baseline_1week_arm_1,
          percent_diff = (diff/baseline_1week_arm_1)*100)
-data3_zbi
+#data3_zbi
 ```
+
+
 
 ```{r}
 data3_zbi %>%
@@ -123,6 +146,8 @@ data3_zbi %>%
 
 ```
 
+# pre-post cafu
+
 ```{r}
 data3_cafu <- data3 %>%
   select(record_id, pt_name, cg_name, 
@@ -131,14 +156,28 @@ data3_cafu <- data3 %>%
          starts_with('cafu')) %>%
   pivot_wider(names_from = redcap_event_name,
               values_from = cafu_iadl_d_score:cafu_adl_u_score) %>%
-  mutate(diff_iadl_d = cafu_iadl_d_score_1month_arm_1 - cafu_iadl_d_score_baseline_1week_arm_1,
-         diff_iadl_u = cafu_iadl_u_score_1month_arm_1 - cafu_iadl_u_score_baseline_1week_arm_1,
-         diff_iadl_u_mean =  cafu_iadl_u_meanscore_1month_arm_1 - cafu_iadl_u_meanscore_baseline_1week_arm_1, 
-         diff_adl_d = cafu_adl_d_score_1month_arm_1 - cafu_adl_d_score_baseline_1week_arm_1, 
-         diff_adl_u = cafu_adl_u_score_1month_arm_1 - cafu_adl_u_score_baseline_1week_arm_1)
+  mutate(diff_iadl_d = 
+           cafu_iadl_d_score_1month_arm_1 - cafu_iadl_d_score_baseline_1week_arm_1,
+         diff_iadl_u = 
+           cafu_iadl_u_score_1month_arm_1 - cafu_iadl_u_score_baseline_1week_arm_1,
+         diff_iadl_u_mean =  
+           cafu_iadl_u_meanscore_1month_arm_1 - cafu_iadl_u_meanscore_baseline_1week_arm_1,          diff_adl_d = 
+           cafu_adl_d_score_1month_arm_1 - cafu_adl_d_score_baseline_1week_arm_1, 
+         diff_adl_u = 
+           cafu_adl_u_score_1month_arm_1 - cafu_adl_u_score_baseline_1week_arm_1)
 
+# data3_cafu %>%
+#  datatable()
+```
+
+
+```{r}
 data3_cafu %>%
-  datatable()
+  select(cg_gender:diff_adl_u) %>%
+  tbl_summary(by = cg_gender,
+              statistic = list(all_continuous() ~ "{mean} ({sd})"), 
+              digits = all_continuous() ~ 2,)
+
 ```
 
 # Below - Not necessary
